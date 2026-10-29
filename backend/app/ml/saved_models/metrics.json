@@ -1,0 +1,40 @@
+{
+  "status": "TRAINED",
+  "timestamp": "2026-10-24T14:40:30.842742",
+  "total_samples": 200000,
+  "train_samples": 160000,
+  "test_samples": 40000,
+  "classes_distribution": {
+    "low": 136,
+    "high": 44,
+    "medium": 39,
+    "critical": 6
+  },
+  "accuracy": 0.924,
+  "precision": 0.921,
+  "recall": 0.925,
+  "f1_score": 0.923,
+  "anomaly_detected_count": 19555,
+  "anomaly_percentage": 9.78,
+  "feature_importances": {
+    "event_login_failed": 0.3794,
+    "event_login_success": 0.1909,
+    "cmd_len": 0.1626,
+    "event_cmd_input": 0.1082,
+    "pass_len": 0.0895,
+    "has_execution": 0.0358,
+    "has_wget_curl": 0.0171,
+    "duration": 0.0095,
+    "user_len": 0.0047,
+    "has_recon": 0.0008,
+    "is_root_user": 0.0006,
+    "protocol_ssh": 0.0004,
+    "dst_port": 0.0003,
+    "protocol_telnet": 0.0001,
+    "has_base64": 0.0
+  },
+  "saved_artifacts": {
+    "classifier": "D:\\PROJECT\\CYVANTIS\\backend\\app\\ml\\saved_models\\severity_classifier.joblib",
+    "anomaly_detector": "D:\\PROJECT\\CYVANTIS\\backend\\app\\ml\\saved_models\\anomaly_detector.joblib"
+  }
+}

@@ -1,0 +1,49 @@
+services:
+  cowrie:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cowrie
+    container_name: cyvantis-cowrie-honeypot
+    ports:
+      - "2222:2222"
+      - "2223:2223"
+    volumes:
+      - cowrie-logs:/cowrie/var/log/cowrie
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: cyvantis-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/cyvantis.db
+      - COWRIE_LOG_PATH=/cowrie_logs/cowrie.json
+      - SIMULATION_MODE=true
+      - SECRET_KEY=cyvantis_super_secret_jwt_key_2026_soc_enterprise_mode_secure
+      - BACKUP_DIR=./backups
+    volumes:
+      - sqlite-data:/app/data
+      - backup-data:/app/backups
+      - cowrie-logs:/cowrie_logs:ro
+    depends_on:
+      - cowrie
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: cyvantis-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  sqlite-data:
+  backup-data:
+  cowrie-logs:

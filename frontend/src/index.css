@@ -1,0 +1,600 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #080E1E;
+    color: #E8EEF8;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    selection-background-color: #38BDF8;
+    selection-color: #080E1E;
+  }
+}
+
+/* Custom Scrollbar styled for Obsidian Intelligence */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080E1E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #243149;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #38BDF8;
+}
+
+/* -------------------------------------------------------------
+   OBSIDIAN INTELLIGENCE DESIGN SYSTEM
+   Palette:
+   Primary bg: #080E1E | Elevated panels: #0D1528 | Secondary: #111C32
+   Borders: #243149 | Primary text: #E8EEF8 | Secondary text: #94A3B8
+   Accent: #38BDF8 | Intel: #818CF8 | Success: #34D399 | Warning: #FBBF24 | Threat: #FB7185
+---------------------------------------------------------------- */
+
+/* Subtle Technical Grid Background */
+.bg-grid-obsidian {
+  background-image: radial-gradient(rgba(36, 49, 73, 0.45) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Precision Elevated Panel */
+.obsidian-panel,
+.glass-panel,
+.glass-card {
+  background: #0D1528;
+  border: 1px solid #243149;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.obsidian-panel:hover,
+.glass-panel:hover,
+.glass-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.08);
+}
+
+/* Graph & Visualization Container */
+.obsidian-graph,
+.glass-graph {
+  background: #0D1528;
+  border: 1px solid #243149;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Secondary Surface */
+.obsidian-surface {
+  background: #111C32;
+  border: 1px solid #243149;
+}
+
+/* Floating Precision Command Bar */
+.floating-tech-nav {
+  background: rgba(13, 21, 40, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #243149;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+}
+
+/* Subtle Corner Telemetry Accents */
+.tech-corner-tl {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid #38BDF8;
+  border-left: 2px solid #38BDF8;
+  border-top-left-radius: 12px;
+  pointer-events: none;
+}
+
+.tech-corner-tr {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid #818CF8;
+  border-right: 2px solid #818CF8;
+  border-top-right-radius: 12px;
+  pointer-events: none;
+}
+
+.tech-corner-bl {
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 10px;
+  height: 10px;
+  border-bottom: 2px solid #243149;
+  border-left: 2px solid #243149;
+  border-bottom-left-radius: 12px;
+  pointer-events: none;
+}
+
+.tech-corner-br {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-bottom: 2px solid #38BDF8;
+  border-right: 2px solid #38BDF8;
+  border-bottom-right-radius: 12px;
+  pointer-events: none;
+}
+
+/* Subtle Precision Ambient Light */
+.bubble-plain {
+  display: none;
+}
+
+/* -------------------------------------------------------------
+   SUBTLE, CLEAN & PROFESSIONAL ANIMATIONS
+   (Replaces disruptive floating/bouncing with high-end micro-motion)
+---------------------------------------------------------------- */
+
+@keyframes subtle-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: subtle-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Gentle Radar Pulse for live honeypot status */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(200, 249, 4, 0.7);
+  }
+
+  70% {
+    transform: scale(1.35);
+    box-shadow: 0 0 0 8px rgba(200, 249, 4, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(200, 249, 4, 0);
+  }
+}
+
+.animate-radar {
+  animation: radar-pulse 2.2s infinite ease-in-out;
+}
+
+/* Subtle Shimmer for High-Tech Glass Edges */
+@keyframes glass-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.glass-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(200, 249, 4, 0.12), transparent);
+  background-size: 200% 100%;
+  animation: glass-shimmer 4s infinite linear;
+}
+
+/* Modern Angular/Squircle Buttons (No Pill Shapes) */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  /* rounded-xl, never pill/rounded-full */
+  background: #6967FB;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  letter-spacing: 0.025em;
+  border: 1px solid rgba(200, 249, 4, 0.3);
+  box-shadow: 0 4px 15px rgba(105, 103, 251, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary:hover {
+  background: #5755E0;
+  border-color: #C8F904;
+  box-shadow: 0 6px 22px rgba(105, 103, 251, 0.5), 0 0 15px rgba(200, 249, 4, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  background: rgba(14, 26, 31, 0.8);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border: 1px solid rgba(105, 103, 251, 0.3);
+  backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-secondary:hover {
+  background: rgba(105, 103, 251, 0.15);
+  border-color: #C8F904;
+  color: #C8F904;
+  box-shadow: 0 0 15px rgba(200, 249, 4, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-lime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  background: #C8F904;
+  color: #0E1A1F;
+  font-weight: 800;
+  font-size: 0.8125rem;
+  letter-spacing: 0.025em;
+  border: 1px solid #FFFFFF;
+  box-shadow: 0 4px 18px rgba(200, 249, 4, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-lime:hover {
+  background: #D8FF1E;
+  box-shadow: 0 6px 25px rgba(200, 249, 4, 0.6), 0 0 15px rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* -------------------------------------------------------------
+   ENTERPRISE LIGHT / WHITE THEME SYSTEM
+   Ultra-clean, accessible, user-friendly, non-AI aesthetic
+---------------------------------------------------------------- */
+html.light,
+body.light {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html.light .landing-page-root {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+/* 1. Global Card & Section Backgrounds (Replaces all dark surfaces with clean white) */
+html.light [class*="bg-[#000000]"],
+html.light [class*="bg-[#030303]"],
+html.light [class*="bg-[#050505]"],
+html.light [class*="bg-[#050b1f]"],
+html.light [class*="bg-[#060e26]"],
+html.light [class*="bg-[#091114]"],
+html.light [class*="bg-[#0E1A1F]"],
+html.light [class*="bg-[#0a0a0a]"],
+html.light [class*="bg-[#0a1128]"],
+html.light [class*="bg-[#050F16]"],
+html.light [class*="bg-[#050B10]"],
+html.light [class*="bg-slate-900"],
+html.light [class*="bg-slate-800"] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+/* 2. Secondary Inner Containers, Code Blocks, Toolbars & Input Fields */
+html.light [class*="bg-[#01040f]"],
+html.light [class*="bg-[#010410]"],
+html.light [class*="bg-[#020510]"],
+html.light [class*="bg-[#020512]"],
+html.light [class*="bg-[#020514]"],
+html.light [class*="bg-[#02071a]"],
+html.light [class*="bg-[#030612]"],
+html.light [class*="bg-[#030716]"],
+html.light [class*="bg-[#030718]"],
+html.light [class*="bg-[#03081e]"],
+html.light [class*="bg-[#030d2a]"],
+html.light [class*="bg-[#04081c]"],
+html.light [class*="bg-[#08122c]"],
+html.light [class*="bg-[#122026]"],
+html.light [class*="bg-[#182C35]"],
+html.light [class*="bg-[#1a2f38]"] {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+/* 3. High-Contrast Text Color Hierarchy */
+html.light .text-white,
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #0F172A !important;
+}
+
+html.light .text-slate-300 {
+  color: #1E293B !important;
+}
+
+html.light .text-slate-400,
+html.light .text-slate-500,
+html.light .text-\[\#9FB0B7\] {
+  color: #475569 !important;
+}
+
+/* 4. Accessible Contrast for Lime (#C8F904) Text on Light Background */
+html.light .text-\[\#C8F904\] {
+  color: #3F6212 !important; /* Deep readable olive-forest green */
+}
+
+/* 5. Accessible Contrast for Cyan (#00d2ff) Text on Light Background */
+html.light .text-\[\#00d2ff\],
+html.light .text-cyan-400 {
+  color: #0369A1 !important; /* Rich deep ocean cyan */
+}
+
+/* 6. Border System (Replaces harsh dark borders with clean subtle dividers) */
+html.light [class*="border-slate-800"],
+html.light [class*="border-slate-700"],
+html.light [class*="border-slate-900"],
+html.light [class*="border-white/5"],
+html.light [class*="border-white/10"] {
+  border-color: #E2E8F0 !important;
+}
+
+html.light [class*="border-[#6967FB]"] {
+  border-color: rgba(105, 103, 251, 0.3) !important;
+}
+
+html.light [class*="border-[#00d2ff]"] {
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+/* 7. Floating Navbar & Badges */
+html.light .floating-tech-nav {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(105, 103, 251, 0.25) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 0 20px rgba(105, 103, 251, 0.08) !important;
+}
+
+html.light .floating-tech-nav a,
+html.light .floating-tech-nav span.text-white {
+  color: #0F172A !important;
+}
+
+html.light .floating-tech-nav button[class*="bg-[#0E1A1F]"] {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
+/* 8. Hero Emblem & Hologram Tile */
+html.light [class*="w-44 h-44"] {
+  background: #FFFFFF !important;
+  border-color: rgba(105, 103, 251, 0.35) !important;
+  box-shadow: 0 20px 45px -10px rgba(105, 103, 251, 0.15), 0 0 20px rgba(105, 103, 251, 0.08) !important;
+}
+
+html.light [class*="w-44 h-44"] svg {
+  color: #4D7C0F !important;
+  filter: drop-shadow(0 2px 8px rgba(77, 124, 15, 0.3)) !important;
+}
+
+/* 9. Buttons in Light Mode */
+html.light .btn-lime {
+  background: #C8F904 !important;
+  color: #0E1A1F !important;
+  border: 1px solid #A3E635 !important;
+  box-shadow: 0 4px 15px rgba(200, 249, 4, 0.35) !important;
+}
+
+html.light .btn-lime span,
+html.light .btn-lime svg {
+  color: #0E1A1F !important;
+}
+
+html.light .btn-secondary {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border: 1.5px solid #CBD5E1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+html.light .btn-secondary:hover {
+  background: #F8FAFC !important;
+  border-color: #6967FB !important;
+  color: #6967FB !important;
+}
+
+/* 10. Status & Telemetry Tag Pills */
+html.light .bg-red-500\/15,
+html.light .bg-red-500\/20 {
+  background-color: #FEE2E2 !important;
+  border-color: #FCA5A5 !important;
+  color: #DC2626 !important;
+}
+html.light .text-red-400 {
+  color: #DC2626 !important;
+}
+
+html.light .bg-amber-500\/15,
+html.light .bg-amber-500\/20 {
+  background-color: #FEF3C7 !important;
+  border-color: #FCD34D !important;
+  color: #D97706 !important;
+}
+html.light .text-amber-400 {
+  color: #B45309 !important;
+}
+
+html.light .bg-emerald-500\/15,
+html.light .bg-emerald-500\/20 {
+  background-color: #DCFCE7 !important;
+  border-color: #86EFAC !important;
+  color: #15803D !important;
+}
+html.light .text-emerald-400 {
+  color: #15803D !important;
+}
+
+html.light .bg-cyan-500\/20,
+html.light .bg-\[\#00d2ff\]\/10,
+html.light .bg-\[\#00d2ff\]\/20 {
+  background-color: #E0F2FE !important;
+  border-color: #7DD3FC !important;
+  color: #0369A1 !important;
+}
+
+html.light .bg-\[\#6967FB\]\/15,
+html.light .bg-\[\#6967FB\]\/20,
+html.light .bg-\[\#6967FB\]\/25 {
+  background-color: #EEF2FF !important;
+  border-color: #C7D2FE !important;
+  color: #4338CA !important;
+}
+
+html.light .bg-\[\#C8F904\]\/10,
+html.light .bg-\[\#C8F904\]\/15 {
+  background-color: #F7FEE7 !important;
+  border-color: #D9F99D !important;
+  color: #3F6212 !important;
+}
+
+/* 11. Form Inputs & Search Bars */
+html.light input,
+html.light textarea,
+html.light select {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+html.light input:focus,
+html.light textarea:focus,
+html.light select:focus {
+  border-color: #6967FB !important;
+  box-shadow: 0 0 0 3px rgba(105, 103, 251, 0.15) !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* 12. Footer Styling */
+html.light footer,
+html.light footer.bg-\[\#020510\] {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #475569 !important;
+}
+
+html.light footer .text-slate-300 {
+  color: #0F172A !important;
+}
+
+html.light footer .text-slate-700 {
+  color: #CBD5E1 !important;
+}
+
+/* 13. Modals & Popups in Light Mode */
+html.light [role="dialog"] [class*="bg-[#0E1A1F]"],
+html.light [role="dialog"] [class*="bg-[#060e26]"] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.15), 0 0 35px rgba(105, 103, 251, 0.1) !important;
+}
+
+/* 14. Top Dismissible Announcement Banner */
+html.light .bg-\[\#0E1A1F\]\/90 {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* 15. Subtle Soft Ambient Lights in Light Mode (removes harsh dark glow) */
+html.light .bubble-plain {
+  opacity: 0.08 !important;
+}
+
+html.light .watermark-text,
+html.light [class*="text-slate-800/10"] {
+  color: rgba(203, 213, 225, 0.4) !important;
+}
+
+/* 16. Geographical Operations Map in Light Mode */
+html.light .bg-\[\#050B10\],
+html.light [class*="bg-[#050B10]"] {
+  background: #F8FAFC !important;
+  background-image: radial-gradient(ellipse 90% 80% at 50% 45%, #FFFFFF 0%, #F1F5F9 85%, #E2E8F0 100%) !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light [class*="bg-black/80"],
+html.light [class*="bg-black/60"],
+html.light [class*="bg-black/50"],
+html.light [class*="bg-black/40"],
+html.light [class*="bg-slate-900/80"],
+html.light [class*="bg-slate-900/60"] {
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+}
+
+html.light [class*="bg-black/80"] span.text-white,
+html.light [class*="bg-black/60"] span.text-white {
+  color: #0F172A !important;
+}
+
+/* 17. Telemetry & Log Console Specifics in Light Mode */
+html.light #telemetry {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light #telemetry input {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+html.light #telemetry input::placeholder {
+  color: #94A3B8 !important;
+}

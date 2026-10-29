@@ -1,0 +1,27 @@
+.env
+.env.*
+!.env.example
+
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.corrupt_bak
+backups/
+**/backups/
+cyvantis_dump.sql
+attack_captures.csv
+
+.kilo/
+.dist/
+frontend/dist/
+node_modules/
+**/node_modules/
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+**/.pytest_cache/
+auto
+screenshot . ps/

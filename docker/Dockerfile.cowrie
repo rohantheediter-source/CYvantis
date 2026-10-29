@@ -1,0 +1,3 @@
+FROM cowrie/cowrie:latest
+
+COPY --chown=cowrie:cowrie docker/cowrie/cowrie.cfg /cowrie/etc/cowrie.cfg
