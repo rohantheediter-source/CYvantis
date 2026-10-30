@@ -11,71 +11,62 @@ from app.schemas import (
     Token, UserResponse, UserLogin, PasswordChangeFirstLogin,
     TotpSetupResponse, TotpVerifyRequest, Login2faVerifyRequest, UserCreate
 )
-from app.security import verify_password, get_password_hash, create_access_token, get_current_user
+from app.config import settings
+from app.security import verify_password, get_password_hash, create_access_token, get_current_user, validate_password_policy
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+_DUMMY_HASH = get_password_hash("cyvantis-timing-equalizer")
+
+
+def _audit(db, user_id, username, action, details):
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=user_id, username=username[:50],
+                    action=action, resource="Auth", details=details))
+
+
 @router.post("/login")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    generic_401 = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     user = db.query(User).filter(User.username == form_data.username).first()
-    
+    now = datetime.datetime.utcnow()
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        # Constant-ish work to reduce username enumeration via timing
+        verify_password(form_data.password, _DUMMY_HASH)
+        _audit(db, None, form_data.username or "unknown", "USER_LOGIN_FAILED", "unknown username")
+        db.commit()
+        raise generic_401
+
+    if user.locked_until and user.locked_until > now:
+        _audit(db, user.id, user.username, "USER_LOGIN_BLOCKED", "login attempted while account locked")
+        db.commit()
+        raise HTTPException(status_code=429, detail="Account temporarily locked after repeated failed logins. Try again later.")
+
+    if not verify_password(form_data.password, user.hashed_password):
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        details = f"failed attempt {user.failed_login_attempts}"
+        if user.failed_login_attempts >= settings.MAX_FAILED_LOGINS:
+            user.locked_until = now + datetime.timedelta(minutes=settings.LOCKOUT_MINUTES)
+            user.failed_login_attempts = 0
+            details += f"; account locked for {settings.LOCKOUT_MINUTES} min"
+        _audit(db, user.id, user.username, "USER_LOGIN_FAILED", details)
+        db.commit()
+        raise generic_401
 
     if not user.is_active:
         raise HTTPException(status_code=400, detail="User account is disabled")
 
-    # Password Verification (15-minute lockout removed)
-    if not verify_password(form_data.password, user.hashed_password):
-        user.failed_login_attempts += 1
-        db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # 3. Check 2FA requirement
+    # 2FA: only a short-lived pending token is issued; the TOTP secret is never returned here
     if user.is_totp_enabled:
         temp_token = create_access_token(
             data={"sub": user.username, "type": "2fa_pending"},
             expires_delta=datetime.timedelta(minutes=5)
         )
-
-        qr_code_url = None
-        if user.totp_secret:
-            import io
-            import base64
-            import qrcode
-            otpauth_url = pyotp.TOTP(user.totp_secret).provisioning_uri(
-                name=user.username,
-                issuer_name="CYVANTIS SOC"
-            )
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=8,
-                border=2,
-            )
-            qr.add_data(otpauth_url)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            buffered = io.BytesIO()
-            img.save(buffered, format="PNG")
-            qr_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            qr_code_url = f"data:image/png;base64,{qr_base64}"
-
-        return {
-            "requires_2fa": True,
-            "temp_token": temp_token,
-            "username": user.username,
-            "qr_code_url": qr_code_url,
-            "totp_secret": user.totp_secret
-        }
+        return {"requires_2fa": True, "temp_token": temp_token, "username": user.username}
 
     # Reset lockout counters on successful login
     user.failed_login_attempts = 0
@@ -102,26 +93,14 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
-    # 1. Check existing username
-    if db.query(User).filter(User.username == user_in.username).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username is already registered. Please choose another username."
-        )
-    
-    # 2. Check existing email
-    if db.query(User).filter(User.email == user_in.email).first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email address is already registered. Please sign in or use another email."
-        )
-
-    # 3. Validate password length
-    if len(user_in.password) < 6:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 6 characters long."
-        )
+    # Self-registration is disabled unless explicitly enabled (ALLOW_SELF_REGISTRATION=true).
+    if not settings.ALLOW_SELF_REGISTRATION:
+        raise HTTPException(status_code=403, detail="Self-registration is disabled. Ask an administrator for an account.")
+    if db.query(User).filter((User.username == user_in.username) | (User.email == user_in.email)).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username or email is already registered.")
+    policy_error = validate_password_policy(user_in.password)
+    if policy_error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=policy_error)
 
     # 4. Create new user with analyst role
     # Self-registered users are analysts by default (Admin privileges locked)
@@ -129,7 +108,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         username=user_in.username.strip(),
         email=user_in.email.strip().lower(),
         full_name=user_in.full_name or user_in.username.capitalize(),
-        role="analyst",
+        role="viewer",
         hashed_password=get_password_hash(user_in.password),
         is_active=True,
         must_change_password=False,
@@ -145,7 +124,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         username=new_user.username,
         action="USER_SELF_REGISTERED",
         resource="Auth",
-        details=f"User self-registered as Analyst: {new_user.username} ({new_user.email})"
+        details=f"User self-registered as Viewer: {new_user.username} ({new_user.email})"
     )
     db.add(audit)
     db.commit()
@@ -156,13 +135,12 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         "access_token": access_token,
         "token_type": "bearer",
         "user": new_user,
-        "message": "Account registered successfully with Analyst privileges."
+        "message": "Account registered with read-only Viewer privileges."
     }
 
 @router.post("/2fa/verify-login")
 def verify_2fa_login(payload: Login2faVerifyRequest, db: Session = Depends(get_db)):
     from jose import jwt, JWTError
-    from app.config import settings
 
     try:
         data = jwt.decode(payload.temp_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -177,8 +155,16 @@ def verify_2fa_login(payload: Login2faVerifyRequest, db: Session = Depends(get_d
     if not user or not user.is_totp_enabled or not user.totp_secret:
         raise HTTPException(status_code=400, detail="2FA is not enabled for this user")
 
+    if user.locked_until and user.locked_until > datetime.datetime.utcnow():
+        raise HTTPException(status_code=429, detail="Account temporarily locked after repeated failed attempts.")
     totp = pyotp.TOTP(user.totp_secret)
     if not totp.verify(payload.totp_code, valid_window=1):
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        if user.failed_login_attempts >= settings.MAX_FAILED_LOGINS:
+            user.locked_until = datetime.datetime.utcnow() + datetime.timedelta(minutes=settings.LOCKOUT_MINUTES)
+            user.failed_login_attempts = 0
+        _audit(db, user.id, user.username, "USER_2FA_FAILED", "invalid TOTP code")
+        db.commit()
         raise HTTPException(status_code=400, detail="Invalid 6-digit 2FA code. Please check Google Authenticator.")
 
     user.failed_login_attempts = 0
@@ -294,8 +280,9 @@ def change_password_first_login(
     if not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     
-    if len(payload.new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
+    policy_error = validate_password_policy(payload.new_password)
+    if policy_error:
+        raise HTTPException(status_code=400, detail=policy_error)
         
     if verify_password(payload.new_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="New password must be different from current password")

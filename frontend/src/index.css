@@ -82,14 +82,39 @@
   border: 1px solid #243149;
 }
 
+/* Cyber Glow Accents (Preserving Brand Palette) */
+.cyber-glow-lime {
+  box-shadow: 0 0 25px rgba(200, 249, 4, 0.35), 0 0 50px rgba(200, 249, 4, 0.15);
+}
+
+.cyber-glow-cyan {
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.3), 0 0 50px rgba(56, 189, 248, 0.12);
+}
+
+.cyber-glow-violet {
+  box-shadow: 0 0 25px rgba(105, 103, 251, 0.35), 0 0 50px rgba(105, 103, 251, 0.15);
+}
+
+.cyber-lime-gradient-text {
+  background: linear-gradient(135deg, #C8F904 0%, #34D399 50%, #38BDF8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cyber-violet-gradient-text {
+  background: linear-gradient(135deg, #C8F904 0%, #00d2ff 40%, #6967FB 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 /* Floating Precision Command Bar */
 .floating-tech-nav {
   background: rgba(13, 21, 40, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid #243149;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(105, 103, 251, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px -5px rgba(0, 0, 0, 0.75), 0 0 20px rgba(105, 103, 251, 0.15);
 }
 
 /* Subtle Corner Telemetry Accents */
@@ -204,6 +229,61 @@
   background: linear-gradient(90deg, transparent, rgba(200, 249, 4, 0.12), transparent);
   background-size: 200% 100%;
   animation: glass-shimmer 4s infinite linear;
+}
+
+/* Circuit Pipeline Sweeping Light Pulse */
+@keyframes pipeline-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(450%);
+  }
+}
+
+/* Map Vertical Radar Laser Sweep */
+@keyframes map-radar-sweep {
+  0% {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  90% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(1250px);
+    opacity: 0;
+  }
+}
+
+/* Interception Shockwave Blast */
+@keyframes shockwave-expand {
+  0% {
+    r: 3px;
+    opacity: 0.9;
+    stroke-width: 2.5px;
+  }
+  70% {
+    opacity: 0.4;
+  }
+  100% {
+    r: 28px;
+    opacity: 0;
+    stroke-width: 0.5px;
+  }
+}
+
+/* Live Terminal Row Highlight */
+@keyframes log-row-flash {
+  0% {
+    background-color: rgba(56, 189, 248, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 /* Modern Angular/Squircle Buttons (No Pill Shapes) */

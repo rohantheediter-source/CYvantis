@@ -11,7 +11,8 @@ from sqlalchemy import or_
 from app.database import get_db
 from app.models import HoneypotEvent, User, AuditLog
 from app.schemas import EventPaginatedResponse, EventResponse
-from app.security import get_current_user
+from app.security import get_current_user, can_view_captured_credentials, REDACTED
+from app.serializers import event_to_dict
 
 router = APIRouter(prefix="/events", tags=["Honeypot Events"])
 
@@ -19,10 +20,11 @@ router = APIRouter(prefix="/events", tags=["Honeypot Events"])
 def get_events(
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=100),
-    search: Optional[str] = None,
+    search: Optional[str] = Query(None, max_length=200),
     protocol: Optional[str] = None,
     severity: Optional[str] = None,
     country: Optional[str] = None,
+    data_origin: Optional[str] = None,
     eventid: Optional[str] = None,
     src_ip: Optional[str] = None,
     start_date: Optional[str] = None,
@@ -54,6 +56,8 @@ def get_events(
         query = query.filter(HoneypotEvent.eventid == eventid)
     if src_ip:
         query = query.filter(HoneypotEvent.src_ip == src_ip)
+    if data_origin:
+        query = query.filter(HoneypotEvent.data_origin == data_origin)
 
     if start_date:
         try:
@@ -79,10 +83,10 @@ def get_events(
         "page": page,
         "page_size": page_size,
         "pages": pages,
-        "items": items
+        "items": [event_to_dict(e, include_secrets=can_view_captured_credentials(current_user)) for e in items]
     }
 
-@router.get("/{event_id}", response_model=EventResponse)
+@router.get("/{event_id:int}", response_model=EventResponse)
 def get_event_detail(
     event_id: int,
     db: Session = Depends(get_db),
@@ -91,7 +95,9 @@ def get_event_detail(
     event = db.query(HoneypotEvent).filter(HoneypotEvent.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    return event
+    d = event_to_dict(event, include_secrets=can_view_captured_credentials(current_user))
+    d["raw_payload"] = event.raw_payload
+    return d
 
 @router.get("/export/csv")
 def export_events_csv(
@@ -118,11 +124,12 @@ def export_events_csv(
         "ID", "Timestamp", "EventID", "Source IP", "Port", "Protocol",
         "Username", "Password", "Command", "Country", "ASN", "Severity", "Simulated"
     ])
+    show_secrets = can_view_captured_credentials(current_user)
 
     for ev in events:
         writer.writerow([
             ev.id, ev.timestamp.isoformat(), ev.eventid, ev.src_ip, ev.dst_port,
-            ev.protocol, ev.username or "", ev.password or "", ev.command or "",
+            ev.protocol, ev.username or "", (ev.password or "") if show_secrets else (REDACTED if ev.password else ""), ev.command or "",
             ev.country, ev.asn, ev.severity, ev.is_simulated
         ])
 
@@ -169,7 +176,8 @@ def export_events_json(
             "dst_port": ev.dst_port,
             "protocol": ev.protocol,
             "username": ev.username,
-            "password": ev.password,
+            "password": ev.password if can_view_captured_credentials(current_user) else (REDACTED if ev.password else None),
+            "data_origin": ev.data_origin,
             "command": ev.command,
             "country": ev.country,
             "asn": ev.asn,

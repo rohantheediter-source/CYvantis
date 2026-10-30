@@ -26,6 +26,8 @@ import { DomainIntelligenceModal } from '../components/soc/DomainIntelligenceMod
 import { CyberWarRoomModal } from '../components/soc/CyberWarRoomModal';
 import { GeographicalOperationsMap } from '../components/common/GeographicalOperationsMap';
 import { SpaceCyberShowcase } from '../components/soc/SpaceCyberShowcase';
+import { AdvancedThreatRadarHero } from '../components/landing/AdvancedThreatRadarHero';
+import { QuickStepGuide } from '../components/landing/QuickStepGuide';
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -1273,9 +1275,10 @@ flags statistically significant deviations in real time using Isolation Forest.
               <button
                 type="button"
                 onClick={onLoginClick}
-                className="hidden md:inline-flex btn-secondary py-1.5 px-3 text-xs font-mono whitespace-nowrap shrink-0"
+                className="hidden md:inline-flex btn-secondary py-1.5 px-3.5 text-xs font-mono font-bold whitespace-nowrap shrink-0 border border-[#38BDF8]/40 hover:border-[#38BDF8] text-[#E8EEF8] hover:text-white hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all items-center gap-1.5"
               >
-                LOGIN
+                <Shield className="w-3.5 h-3.5 text-[#38BDF8]" />
+                <span>ENTER SOC</span>
               </button>
 
               {/* Primary CTA (Angular Squircle) */}
@@ -1440,20 +1443,26 @@ flags statistically significant deviations in real time using Isolation Forest.
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08]">
                 {lang === 'EN' ? (
                   <>
-                    Deceive. <span className="text-[#C8F904]">Detect.</span><br />
-                    Neutralize. <span className="text-[#6967FB]">Every Threat.</span>
+                    Detect. <span className="text-[#C8F904]">Predict.</span><br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C8F904] via-[#00d2ff] to-[#6967FB]">
+                      Neutralize.
+                    </span>{' '}
+                    <span className="text-[#6967FB]">Every Threat.</span>
                   </>
                 ) : (
                   <>
-                    छलावा दें। <span className="text-[#C8F904]">पहचानें।</span><br />
-                    निष्प्रभावी करें। <span className="text-[#6967FB]">हर खतरा।</span>
+                    पहचानें। <span className="text-[#C8F904]">पूर्वानुमान।</span><br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C8F904] via-[#00d2ff] to-[#6967FB]">
+                      निष्प्रभावी करें।
+                    </span>{' '}
+                    <span className="text-[#6967FB]">हर खतरा।</span>
                   </>
                 )}
               </h1>
 
-              <p className="text-base text-[#9FB0B7] max-w-xl leading-relaxed font-sans">
+              <p className="text-base sm:text-lg text-[#9FB0B7] max-w-xl leading-relaxed font-sans">
                 {lang === 'EN'
-                  ? "CYVANTIS is an enterprise honeypot threat intelligence platform delivering Cowrie decoy deception, AI-assisted threat monitoring, real-time telemetry streaming, and automated incident investigation — protecting modern digital infrastructure."
+                  ? "Next-generation Cyber Threat Intelligence platform delivering Cowrie decoy deception, AI-assisted anomaly detection, live telemetry streaming, and automated incident correlation — protecting digital infrastructure."
                   : "CYVANTIS एक उन्नत साइबर सुरक्षा प्लेटफ़ॉर्म है जो Cowrie honeypot deception, AI आधारित थ्रेट विश्लेषण, और रियल-टाइम स्ट्रीम से आपके डिजिटल इंफ्रास्ट्रक्चर की सुरक्षा करता है।"
                 }
               </p>
@@ -1492,18 +1501,9 @@ flags statistically significant deviations in real time using Isolation Forest.
               </div>
             </div>
 
-            {/* Right Holographic Glass Emblem (No Pill, Modern Geometric) */}
-            <div className="lg:col-span-5 relative flex items-center justify-center min-h-[420px]">
-              <div className="bubble-plain w-72 h-72 bubble-lime opacity-20" />
-
-              <div
-                className="relative z-20 w-44 h-44 rounded-3xl bg-[#0E1A1F]/90 backdrop-blur-2xl border-2 border-[#6967FB] hover:border-[#C8F904] flex flex-col items-center justify-center shadow-[0_0_50px_rgba(105,103,251,0.35)] transition-all duration-300 hover:scale-105 cursor-pointer"
-                onClick={onLoginClick}
-              >
-                <ShieldCheck className="w-16 h-16 text-[#C8F904] drop-shadow-[0_0_15px_rgba(200,249,4,0.6)]" />
-                <span className="text-[11px] font-mono font-bold text-white tracking-widest mt-2">CYVANTIS</span>
-                <span className="text-[9px] font-mono text-[#C8F904]">ENTER SOC →</span>
-              </div>
+            {/* Right Advanced Cyber Threat Radar Focal Point */}
+            <div className="lg:col-span-5 relative flex items-center justify-center w-full">
+              <AdvancedThreatRadarHero onExploreClick={onLoginClick} />
             </div>
           </div>
         </header>
@@ -2437,63 +2437,7 @@ flags statistically significant deviations in real time using Isolation Forest.
         </section>
 
         {/* Getting Started Guide */}
-        <section id="getting-started" className="py-24 px-6 max-w-7xl mx-auto border-t border-slate-800/80 z-10 relative">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-[#00d2ff] text-xs font-mono mb-3">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>DEPLOYMENT ONBOARDING</span>
-            </div>
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">Quick 3-Step Setup Guide</h2>
-            <p className="text-slate-400 text-sm mt-3 font-sans max-w-xl mx-auto">
-              Get your CYVANTIS threat intelligence instance running in under 2 minutes.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-[#060e26] p-7 rounded-2xl border border-slate-800 relative shadow-xl hover:border-[#00d2ff]/40 transition group hover:-translate-y-1">
-              <div className="w-10 h-10 rounded-xl bg-[#00d2ff]/10 border border-[#00d2ff]/30 font-mono font-bold text-[#00d2ff] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                01
-              </div>
-              <h4 className="text-xl font-bold text-white mb-2">FastAPI Backend</h4>
-              <p className="text-xs text-slate-400 font-sans mb-4 leading-relaxed">
-                Launch FastAPI backend server on port 8000. SQLite database is automatically seeded.
-              </p>
-              <div className="bg-[#030612] p-3 rounded-xl border border-slate-800 font-mono text-[11px] text-[#00d2ff] overflow-x-auto">
-                <code>uvicorn app.main:app --reload</code>
-              </div>
-            </div>
-
-            <div className="bg-[#060e26] p-7 rounded-2xl border border-slate-800 relative shadow-xl hover:border-blue-500/40 transition group hover:-translate-y-1">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 font-mono font-bold text-blue-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                02
-              </div>
-              <h4 className="text-xl font-bold text-white mb-2">React Frontend</h4>
-              <p className="text-xs text-slate-400 font-sans mb-4 leading-relaxed">
-                Start Vite dev server on port 5173 to access the real-time SOC Control Panel interface.
-              </p>
-              <div className="bg-[#030612] p-3 rounded-xl border border-slate-800 font-mono text-[11px] text-blue-300 overflow-x-auto">
-                <code>cd frontend && npm run dev</code>
-              </div>
-            </div>
-
-            <div className="bg-[#060e26] p-7 rounded-2xl border border-slate-800 relative shadow-xl hover:border-teal-500/40 transition group hover:-translate-y-1">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 font-mono font-bold text-teal-400 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                03
-              </div>
-              <h4 className="text-xl font-bold text-white mb-2">Authenticate</h4>
-              <p className="text-xs text-slate-400 font-sans mb-4 leading-relaxed">
-                Log in with default admin credentials and complete the mandatory 2FA TOTP setup.
-              </p>
-              <button
-                onClick={onLoginClick}
-                className="w-full py-3 bg-gradient-to-r from-[#00d2ff] to-[#0072ff] hover:from-[#00c0ee] hover:to-[#005cd6] text-white font-mono font-bold text-xs rounded-xl transition shadow-lg shadow-[#00d2ff]/20 hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-              >
-                <span>Sign In to Console</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </section>
+        <QuickStepGuide onLoginClick={onLoginClick} />
       </main>
 
       {/* Footer */}

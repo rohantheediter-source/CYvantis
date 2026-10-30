@@ -40,6 +40,7 @@ def create_ioc(
         category=ioc_in.category,
         description=ioc_in.description,
         source=ioc_in.source,
+        confidence=ioc_in.confidence,
         first_seen=datetime.datetime.utcnow(),
         last_seen=datetime.datetime.utcnow()
     )
@@ -64,26 +65,30 @@ def lookup_ip_intelligence(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    from app.intel.indicators import classify_indicator
+    from app.intel.service import cached_reputation
+    itype, ip_address = classify_indicator(ip_address)
+    if itype != "ip":
+        raise HTTPException(status_code=422, detail="Invalid IP address")
     geo = enrich_ip(ip_address)
-    
-    # Calculate attack history from honeypot database
-    events_count = db.query(HoneypotEvent).filter(HoneypotEvent.src_ip == ip_address).count()
-    first_seen_event = db.query(HoneypotEvent).filter(HoneypotEvent.src_ip == ip_address).order_by(HoneypotEvent.timestamp.asc()).first()
-    last_seen_event = db.query(HoneypotEvent).filter(HoneypotEvent.src_ip == ip_address).order_by(HoneypotEvent.timestamp.desc()).first()
-
-    targeted_users = db.query(HoneypotEvent.username).filter(
-        HoneypotEvent.src_ip == ip_address, HoneypotEvent.username.isnot(None)
-    ).distinct().all()
-
+    q = db.query(HoneypotEvent).filter(HoneypotEvent.src_ip == ip_address)
+    events_count = q.count()
+    first_seen_event = q.order_by(HoneypotEvent.timestamp.asc()).first()
+    last_seen_event = q.order_by(HoneypotEvent.timestamp.desc()).first()
+    targeted_users = q.filter(HoneypotEvent.username.isnot(None)).with_entities(HoneypotEvent.username).distinct().limit(50).all()
     ioc = db.query(ThreatIntelIOC).filter(ThreatIntelIOC.indicator == ip_address).first()
+    rep = cached_reputation(db, ip_address)
 
-    risk_rating = "Low"
-    if geo["threat_score"] > 80 or events_count > 20:
+    # Rating is derived only from known reputation and observed honeypot activity
+    score = rep["score"]
+    if (score is not None and score >= 80) or events_count > 20:
         risk_rating = "Critical"
-    elif geo["threat_score"] > 60 or events_count > 5:
+    elif (score is not None and score >= 60) or events_count > 5:
         risk_rating = "High"
-    elif geo["threat_score"] > 40 or events_count > 0:
+    elif (score is not None and score >= 40) or events_count > 0:
         risk_rating = "Medium"
+    else:
+        risk_rating = "Low" if score is not None else "Unknown"
 
     return {
         "ip": ip_address,
@@ -91,7 +96,9 @@ def lookup_ip_intelligence(
         "country_code": geo["country_code"],
         "city": geo["city"],
         "asn": geo["asn"],
-        "threat_score": geo["threat_score"],
+        "geo_source": geo["geo_source"],
+        "threat_score": score,
+        "threat_score_sources": rep["sources"],
         "risk_rating": risk_rating,
         "total_honeypot_attacks": events_count,
         "first_seen": first_seen_event.timestamp.isoformat() if first_seen_event else None,
@@ -105,15 +112,23 @@ def lookup_ip_intelligence(
 def scan_target_intelligence(
     target: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_roles(["admin"]))
 ):
+    """Active scan (TCP connect / nmap -F). Admin-only; only scan systems you are authorised to test."""
+    import re
+    target = target.strip()
+    if not target or target.startswith("-") or len(target) > 253 or not re.fullmatch(r"[A-Za-z0-9.:\-\[\]/]+", target):
+        raise HTTPException(status_code=422, detail="Invalid scan target")
+    db.add(AuditLog(timestamp=datetime.datetime.utcnow(), user_id=current_user.id, username=current_user.username,
+                    action="ACTIVE_SCAN", resource="ThreatIntelligence", details=f"scan target {target}"))
+    db.commit()
     from app.utils.nmap_scanner import scan_url_and_host
     return scan_url_and_host(target)
 
 from pydantic import BaseModel
 class URLScanRequest(BaseModel):
     url: str
-    virustotal_key: Optional[str] = None
+    virustotal_key: Optional[str] = None  # ignored: API keys are server-side only (VIRUSTOTAL_API_KEY)
 
 @router.post("/url-scan")
 def scan_url_threat_endpoint(
@@ -121,6 +136,9 @@ def scan_url_threat_endpoint(
     current_user: User = Depends(get_current_user)
 ):
     from app.utils.url_scanner import analyze_url_threat
-    return analyze_url_threat(req.url, virustotal_api_key=req.virustotal_key)
+    from app.config import settings
+    if len(req.url) > 2048:
+        raise HTTPException(status_code=422, detail="URL too long")
+    return analyze_url_threat(req.url, virustotal_api_key=settings.VIRUSTOTAL_API_KEY or None)
 
 

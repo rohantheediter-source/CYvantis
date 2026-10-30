@@ -1,6 +1,6 @@
 import datetime
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, Field, EmailStr
 
 # Auth & User Schemas
 class Token(BaseModel):
@@ -86,20 +86,26 @@ class EventResponse(BaseModel):
     eventid: str
     timestamp: datetime.datetime
     src_ip: str
-    dst_port: int
-    protocol: str
+    dst_ip: Optional[str] = None
+    dst_port: Optional[int] = None
+    protocol: Optional[str] = None
     username: Optional[str] = None
-    password: Optional[str] = None
+    password: Optional[str] = None  # redacted for non-admin users
     command: Optional[str] = None
     file_hash: Optional[str] = None
     session_id: Optional[str] = None
-    duration: float
-    country: str
-    country_code: str
-    city: str
-    asn: str
+    duration: Optional[float] = None
+    country: Optional[str] = None
+    country_code: Optional[str] = None
+    city: Optional[str] = None
+    asn: Optional[str] = None
     severity: str
     is_simulated: bool
+    data_origin: Optional[str] = None
+    source: Optional[str] = None
+    category: Optional[str] = None
+    sensor: Optional[str] = None
+    source_ref: Optional[str] = None
     raw_payload: Optional[str] = None
 
     class Config:
@@ -178,19 +184,38 @@ class AlertResponse(BaseModel):
     is_acknowledged: bool
     acknowledged_by_id: Optional[int] = None
     acknowledged_at: Optional[datetime.datetime] = None
+    incident_id: Optional[int] = None
+    risk_score: Optional[float] = None
+    priority: Optional[str] = None
+    confidence: Optional[float] = None
+    occurrence_count: Optional[int] = None
+    explanation: Optional[str] = None
+    data_origin: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 # Detection Rule Schemas
 class DetectionRuleCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=2000)
     rule_type: str
-    condition: str
-    threshold: int = 5
-    severity: str = "high"
+    condition: str = Field("{}", max_length=4000)  # JSON object
+    threshold: int = Field(5, ge=1, le=100000)
+    severity: str = Field("high", pattern="^(low|medium|high|critical)$")
     is_enabled: bool = True
+    window_seconds: int = Field(300, ge=10, le=604800)
+    confidence: float = Field(0.7, ge=0.05, le=1.0)
+
+
+class DetectionRuleUpdate(BaseModel):
+    description: Optional[str] = Field(None, max_length=2000)
+    condition: Optional[str] = Field(None, max_length=4000)
+    threshold: Optional[int] = Field(None, ge=1, le=100000)
+    severity: Optional[str] = Field(None, pattern="^(low|medium|high|critical)$")
+    is_enabled: Optional[bool] = None
+    window_seconds: Optional[int] = Field(None, ge=10, le=604800)
+    confidence: Optional[float] = Field(None, ge=0.05, le=1.0)
 
 class DetectionRuleResponse(BaseModel):
     id: int
@@ -203,18 +228,22 @@ class DetectionRuleResponse(BaseModel):
     is_enabled: bool
     created_at: datetime.datetime
     last_triggered: Optional[datetime.datetime] = None
+    window_seconds: Optional[int] = None
+    confidence: Optional[float] = None
+    trigger_count: Optional[int] = None
 
     class Config:
         from_attributes = True
 
 # Threat Intel IOC Schemas
 class ThreatIntelIOCCreate(BaseModel):
-    indicator: str
-    ioc_type: str # ip, domain, hash
-    threat_score: int = 50
-    category: str = "Malicious Host"
-    description: Optional[str] = None
-    source: str = "Manual Entry"
+    indicator: str = Field(..., min_length=1, max_length=255)
+    ioc_type: str = Field(..., pattern="^(ip|domain|url|hash|cve)$")
+    threat_score: int = Field(50, ge=0, le=100)
+    category: str = Field("Malicious Host", max_length=50)
+    description: Optional[str] = Field(None, max_length=2000)
+    source: str = Field("Manual Entry", max_length=100)
+    confidence: float = Field(0.5, ge=0.0, le=1.0)
 
 class ThreatIntelIOCResponse(BaseModel):
     id: int
@@ -226,6 +255,8 @@ class ThreatIntelIOCResponse(BaseModel):
     first_seen: datetime.datetime
     last_seen: datetime.datetime
     source: str
+    confidence: Optional[float] = None
+    is_demo: Optional[bool] = None
 
     class Config:
         from_attributes = True

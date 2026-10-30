@@ -23,7 +23,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
-    <div className="sticky top-0 z-20 px-4 sm:px-6 py-2.5 bg-[#080E1E]/90 backdrop-blur-md border-b border-[#243149]">
+    <div className="sticky top-0 z-20 px-4 sm:px-6 py-2 bg-[#080E1E]/95 backdrop-blur-xl border-b border-[#243149] shadow-[0_4px_20px_rgba(0,0,0,0.5)] relative">
+      {/* Specular Top Edge Light */}
+      <div className="absolute top-0 left-12 right-12 h-[1px] bg-gradient-to-r from-transparent via-[#38BDF8]/25 to-transparent pointer-events-none" />
       <header className="flex items-center justify-between h-11 max-w-[1600px] mx-auto">
         {/* Left Section: Breadcrumbs & Page Context */}
         <div className="flex items-center gap-3">

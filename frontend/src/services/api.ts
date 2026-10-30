@@ -58,10 +58,12 @@ export async function apiRequest<T = any>(
   return response.json();
 }
 
-export function getWebSocketUrl(): string {
+export function getWebSocketUrl(token?: string | null): string {
   const host = getHost();
   const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${host}:8000/api/v1/ws/events`;
+  const url = `${protocol}//${host}:8000/api/v1/ws/events`;
+  const authToken = token || getAuthToken();
+  return authToken ? `${url}?token=${encodeURIComponent(authToken)}` : url;
 }
 
 export async function downloadFile(endpoint: string, defaultFilename: string) {

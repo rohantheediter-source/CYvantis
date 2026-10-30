@@ -26,36 +26,66 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const wsUrl = getWebSocketUrl();
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+    let isDisposed = false;
 
-    ws.onopen = () => {
-      setIsConnected(true);
-    };
-
-    ws.onmessage = (event) => {
-      if (isPausedRef.current) return;
-
+    const connectWs = () => {
+      if (isDisposed) return;
       try {
-        const newEvent: HoneypotEvent = JSON.parse(event.data);
-        setLiveEvents((prev) => [newEvent, ...prev.slice(0, 99)]);
+        const wsUrl = getWebSocketUrl();
+        const token = localStorage.getItem('cyvantis_token');
+        socket = token 
+          ? new WebSocket(wsUrl, ['cyvantis.bearer', token])
+          : new WebSocket(wsUrl);
+        wsRef.current = socket;
+
+        socket.onopen = () => {
+          setIsConnected(true);
+        };
+
+        socket.onmessage = (event) => {
+          if (isPausedRef.current) return;
+
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.type === 'event' && parsed.data) {
+              setLiveEvents((prev) => [parsed.data as HoneypotEvent, ...prev.slice(0, 99)]);
+            } else if (parsed.eventid) {
+              setLiveEvents((prev) => [parsed as HoneypotEvent, ...prev.slice(0, 99)]);
+            }
+          } catch (err) {
+            console.error('Failed to parse WebSocket honeypot event:', err);
+          }
+        };
+
+        socket.onclose = () => {
+          setIsConnected(false);
+          if (!isDisposed) {
+            reconnectTimeout = setTimeout(connectWs, 3000);
+          }
+        };
+
+        socket.onerror = () => {
+          setIsConnected(false);
+          socket?.close();
+        };
       } catch (err) {
-        console.error('Failed to parse WebSocket honeypot event:', err);
+        setIsConnected(false);
+        if (!isDisposed) {
+          reconnectTimeout = setTimeout(connectWs, 3000);
+        }
       }
     };
 
-    ws.onclose = () => {
-      setIsConnected(false);
-    };
-
-    ws.onerror = (err) => {
-      console.error('WebSocket error:', err);
-      setIsConnected(false);
-    };
+    connectWs();
 
     return () => {
-      ws.close();
+      isDisposed = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (socket) {
+        socket.close();
+      }
     };
   }, [isAuthenticated]);
 

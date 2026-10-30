@@ -21,7 +21,9 @@ export const OperationalStatusStrip: React.FC<OperationalStatusStripProps> = ({
   isRefreshing = false
 }) => {
   return (
-    <div className="bg-[#0D1528] border border-[#243149] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+    <div className="bg-[#0D1528] border border-[#243149] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+      {/* Specular Top Edge Light */}
+      <div className="absolute top-0 left-8 right-8 h-[1px] bg-gradient-to-r from-transparent via-[#34D399]/25 to-transparent pointer-events-none" />
       <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs font-mono">
         {/* API Gateway */}
         <div className="flex items-center gap-2">

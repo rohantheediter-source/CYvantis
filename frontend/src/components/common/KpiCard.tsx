@@ -73,6 +73,8 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         styles.glow
       } ${onClick ? 'cursor-pointer hover:bg-[#111C32] hover:-translate-y-0.5' : ''}`}
     >
+      {/* Specular top border illumination */}
+      <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-[#38BDF8]/30 to-transparent pointer-events-none" />
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wider text-[#94A3B8] font-mono">
           {title}

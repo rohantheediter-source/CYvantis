@@ -1,40 +1,230 @@
 {
   "status": "TRAINED",
-  "timestamp": "2026-10-24T14:40:30.842742",
-  "total_samples": 200000,
-  "train_samples": 160000,
-  "test_samples": 40000,
+  "model_version": "rf-20261029180336",
+  "timestamp": "2026-10-29T18:03:37.023998Z",
+  "sklearn_version": "1.9.1",
+  "dataset": {
+    "source": "synthetic",
+    "synthetic": true,
+    "sessions": 300,
+    "seed": 5,
+    "description": "Synthetic labelled honeypot sessions (see app/ml/trainer.py docstring). Metrics are limited to this synthetic dataset."
+  },
+  "total_samples": 2738,
+  "train_samples": 1647,
+  "validation_samples": 550,
+  "test_samples": 541,
+  "split_method": "StratifiedGroupKFold by session_id (60/20/20), no session spans two splits",
   "classes_distribution": {
-    "low": 136,
-    "high": 44,
-    "medium": 39,
-    "critical": 6
+    "medium": 1441,
+    "low": 820,
+    "high": 321,
+    "critical": 156
   },
-  "accuracy": 0.924,
-  "precision": 0.921,
-  "recall": 0.925,
-  "f1_score": 0.923,
-  "anomaly_detected_count": 19555,
-  "anomaly_percentage": 9.78,
+  "test_class_distribution": {
+    "medium": 282,
+    "low": 164,
+    "high": 63,
+    "critical": 32
+  },
+  "model_selection": {
+    "param": "max_depth",
+    "chosen": 8,
+    "validation_macro_f1": 0.9055
+  },
+  "accuracy": 0.9353,
+  "precision": 0.8979,
+  "recall": 0.9122,
+  "f1_score": 0.9033,
+  "weighted": {
+    "precision": 0.9371,
+    "recall": 0.9353,
+    "f1": 0.9346
+  },
+  "majority_class_baseline_accuracy": 0.5213,
+  "per_class": {
+    "low": {
+      "precision": 0.9586,
+      "recall": 0.8476,
+      "f1": 0.8997,
+      "support": 164,
+      "false_positive_rate": 0.0159
+    },
+    "medium": {
+      "precision": 0.9555,
+      "recall": 0.9894,
+      "f1": 0.9721,
+      "support": 282,
+      "false_positive_rate": 0.0502
+    },
+    "high": {
+      "precision": 0.8592,
+      "recall": 0.9683,
+      "f1": 0.9104,
+      "support": 63,
+      "false_positive_rate": 0.0209
+    },
+    "critical": {
+      "precision": 0.8182,
+      "recall": 0.8438,
+      "f1": 0.8308,
+      "support": 32,
+      "false_positive_rate": 0.0118
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "low",
+      "medium",
+      "high",
+      "critical"
+    ],
+    "matrix": [
+      [
+        139,
+        12,
+        9,
+        4
+      ],
+      [
+        1,
+        279,
+        0,
+        2
+      ],
+      [
+        2,
+        0,
+        61,
+        0
+      ],
+      [
+        3,
+        1,
+        1,
+        27
+      ]
+    ]
+  },
+  "classification_report": {
+    "low": {
+      "precision": 0.9586206896551724,
+      "recall": 0.8475609756097561,
+      "f1-score": 0.8996763754045307,
+      "support": 164.0
+    },
+    "medium": {
+      "precision": 0.9554794520547946,
+      "recall": 0.9893617021276596,
+      "f1-score": 0.9721254355400697,
+      "support": 282.0
+    },
+    "high": {
+      "precision": 0.8591549295774648,
+      "recall": 0.9682539682539683,
+      "f1-score": 0.9104477611940298,
+      "support": 63.0
+    },
+    "critical": {
+      "precision": 0.8181818181818182,
+      "recall": 0.84375,
+      "f1-score": 0.8307692307692308,
+      "support": 32.0
+    },
+    "accuracy": 0.9353049907578558,
+    "macro avg": {
+      "precision": 0.8978592223673125,
+      "recall": 0.912231661497846,
+      "f1-score": 0.9032547007269652,
+      "support": 541.0
+    },
+    "weighted avg": {
+      "precision": 0.9370934885916798,
+      "recall": 0.9353049907578558,
+      "f1-score": 0.9346194505147541,
+      "support": 541.0
+    }
+  },
+  "anomaly_detector": {
+    "algorithm": "IsolationForest(contamination='auto'), fit without labels",
+    "evaluated_against": "malicious = label in {high, critical} on held-out test split",
+    "flagged_test": 108,
+    "true_positives": 52,
+    "false_positives": 56,
+    "false_negatives": 43,
+    "true_negatives": 390,
+    "precision": 0.4815,
+    "recall": 0.5474,
+    "false_positive_rate": 0.1256
+  },
+  "anomaly_detected_count": 108,
+  "anomaly_percentage": 19.96,
+  "feature_columns": [
+    "duration",
+    "dst_port",
+    "protocol_ssh",
+    "protocol_telnet",
+    "cmd_len",
+    "cmd_tokens",
+    "user_len",
+    "pass_len",
+    "is_root_user",
+    "has_wget_curl",
+    "has_execution",
+    "has_recon",
+    "has_obfuscation",
+    "has_persistence",
+    "has_url",
+    "event_login_success",
+    "event_login_failed",
+    "event_cmd_input",
+    "event_file_transfer",
+    "event_session"
+  ],
+  "feature_engineering": {
+    "duration": "session duration in seconds (0 if absent)",
+    "dst_port": "destination port (22 if absent)",
+    "protocol_ssh / protocol_telnet": "one-hot protocol",
+    "cmd_len / cmd_tokens": "length and whitespace token count of the command",
+    "user_len / pass_len": "length of attempted username / password (values themselves are not used)",
+    "is_root_user": "username in {root, admin, administrator, system}",
+    "has_wget_curl": "command uses a download tool (wget/curl/tftp/ftp)",
+    "has_execution": "command executes code (chmod +x, sh/bash/python/perl, nc)",
+    "has_recon": "command is host reconnaissance (uname, whoami, id, /proc/cpuinfo, ...)",
+    "has_obfuscation": "base64/eval/exec/hex-escape usage",
+    "has_persistence": "authorized_keys/crontab/useradd/passwd/systemctl",
+    "has_url": "command contains a URL",
+    "event_*": "one-hot event family from eventid"
+  },
   "feature_importances": {
-    "event_login_failed": 0.3794,
-    "event_login_success": 0.1909,
-    "cmd_len": 0.1626,
-    "event_cmd_input": 0.1082,
-    "pass_len": 0.0895,
-    "has_execution": 0.0358,
-    "has_wget_curl": 0.0171,
-    "duration": 0.0095,
-    "user_len": 0.0047,
-    "has_recon": 0.0008,
-    "is_root_user": 0.0006,
-    "protocol_ssh": 0.0004,
-    "dst_port": 0.0003,
-    "protocol_telnet": 0.0001,
-    "has_base64": 0.0
+    "event_login_failed": 0.157,
+    "event_session": 0.1312,
+    "pass_len": 0.1286,
+    "has_recon": 0.1118,
+    "cmd_len": 0.0979,
+    "user_len": 0.0694,
+    "event_file_transfer": 0.0614,
+    "cmd_tokens": 0.0547,
+    "event_login_success": 0.0502,
+    "event_cmd_input": 0.0449,
+    "duration": 0.0269,
+    "has_execution": 0.0174,
+    "is_root_user": 0.0125,
+    "has_wget_curl": 0.0093,
+    "has_url": 0.0073,
+    "dst_port": 0.0051,
+    "protocol_telnet": 0.0051,
+    "protocol_ssh": 0.005,
+    "has_persistence": 0.0041,
+    "has_obfuscation": 0.0006
   },
+  "limitations": [
+    "Trained and evaluated on synthetic data unless a labelled CSV is supplied.",
+    "Per-event classifier; it does not predict future attacks (no temporal forecasting task is evaluated).",
+    "ML output is supporting context only - it never creates or confirms an alert on its own."
+  ],
   "saved_artifacts": {
-    "classifier": "D:\\PROJECT\\CYVANTIS\\backend\\app\\ml\\saved_models\\severity_classifier.joblib",
-    "anomaly_detector": "D:\\PROJECT\\CYVANTIS\\backend\\app\\ml\\saved_models\\anomaly_detector.joblib"
+    "classifier": "severity_classifier.joblib",
+    "anomaly_detector": "anomaly_detector.joblib"
   }
 }
